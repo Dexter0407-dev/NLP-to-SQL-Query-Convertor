@@ -1,0 +1,49 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-ci.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "backend/**"
+
+jobs:
+  test:
+    name: Lint & Test (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r backend/requirements.txt
+        working-directory: .
+
+      - name: Seed sample DB
+        run: python -m app.seed
+        working-directory: backend
+        env:
+          DATABASE_URL: sqlite:///./test.db
+
+      - name: Run smoke tests
+        run: python -m pytest tests/ -v --tb=short
+        working-directory: backend
+        env:
+          DATABASE_URL: sqlite:///./test.db
+          LLM_PROVIDER: groq
+          LLM_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          ALLOWED_ORIGINS: '["http://localhost:3000"]'
