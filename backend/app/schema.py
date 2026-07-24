@@ -32,7 +32,7 @@ def _get_sqlite_schema(url: str) -> SchemaResponse:
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
-    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name;")
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name;")
     table_names = [r[0] for r in cursor.fetchall()]
 
     tables: List[TableInfo] = []
