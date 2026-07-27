@@ -86,6 +86,46 @@ def _call_groq(prompt: str) -> str:
     return resp.choices[0].message.content or ""
 
 
+def _call_together(prompt: str) -> str:
+    """Together AI — OpenAI-compatible, free $1 credit, no card needed."""
+    from openai import OpenAI
+    model = settings.llm_model or "meta-llama/Llama-3-70b-chat-hf"
+    client = OpenAI(
+        api_key=settings.llm_api_key,
+        base_url="https://api.together.xyz/v1",
+    )
+    resp = client.chat.completions.create(
+        model=model,
+        messages=[
+            {"role": "system", "content": _SYSTEM_PROMPT},
+            {"role": "user", "content": prompt},
+        ],
+        temperature=0,
+        max_tokens=512,
+    )
+    return resp.choices[0].message.content or ""
+
+
+def _call_mistral(prompt: str) -> str:
+    """Mistral AI — free tier, OpenAI-compatible endpoint."""
+    from openai import OpenAI
+    model = settings.llm_model or "mistral-small-latest"
+    client = OpenAI(
+        api_key=settings.llm_api_key,
+        base_url="https://api.mistral.ai/v1",
+    )
+    resp = client.chat.completions.create(
+        model=model,
+        messages=[
+            {"role": "system", "content": _SYSTEM_PROMPT},
+            {"role": "user", "content": prompt},
+        ],
+        temperature=0,
+        max_tokens=512,
+    )
+    return resp.choices[0].message.content or ""
+
+
 def _call_claude(prompt: str) -> str:
     try:
         import anthropic
@@ -137,13 +177,17 @@ def generate_sql(question: str, schema: SchemaResponse) -> str:
             raw = _call_openai(prompt)
         elif provider == "groq":
             raw = _call_groq(prompt)
+        elif provider == "together":
+            raw = _call_together(prompt)
+        elif provider == "mistral":
+            raw = _call_mistral(prompt)
         elif provider == "claude":
             raw = _call_claude(prompt)
         elif provider == "gemini":
             raw = _call_gemini(prompt)
         else:
             raise ValueError(f"Unknown LLM provider: {provider!r}. "
-                             "Choose openai, groq, claude, or gemini.")
+                             "Choose openai, groq, together, mistral, claude, or gemini.")
     except Exception as exc:
         logger.exception("LLM call failed")
         raise RuntimeError(f"LLM call failed: {exc}") from exc
